@@ -2,23 +2,24 @@ import torch
 import torch.nn as nn
 from dataset.data_loader import *
 import torch.optim as optim
+import torch.nn.functional as F
 from model import model
 class argument:
     def __init__(self):
         self.batch_size=128
         self.num_workers=4
         self.opt='Adam'
-        self.epochs=200
+        self.epochs=2000
         self.img_size=32
         self.gen_epoch=4
-        self.save_epoch=500
-        self.device=torch.device("cuda:0")
+        self.save_epoch=50
+        self.device=torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
         self.source='svnh'
         self.target='mnist'
     def set_source(self,s):
         self.source=s
 def get_dis(r1,r2):
-    return torch.mean(torch.abs(r1-r2))
+    return torch.mean(torch.abs(F.softmax(r1)-F.softmax(r2)))
 
 def get_data(data):
     if data== 'svnh':
@@ -32,9 +33,11 @@ def set_zero_grad(netG,netD1,netD2):
     netG.zero_grad()
     netD1.zero_grad()
     netD2.zero_grad()
-def  train(args,source_trainset,target_trainset):
+def  train(args,source_trainset,target_trainset,target_test):
     criterion=nn.CrossEntropyLoss()
-    opt_g, opt_c1, opt_c2=set_optimizer(net_G,net_D1,net_D2,args.opt)
+    opt_g, opt_c1, opt_c2=set_optimizer(net_G,net_D1,net_D2,args.opt,lr=0.002)
+
+    torch.cuda.manual_seed(1)
     for epoch in range(args.epochs):
         for i,data in enumerate(source_trainset):
 
@@ -57,14 +60,15 @@ def  train(args,source_trainset,target_trainset):
             target=next(iter(target_trainset))[0].to(args.device)
             if args.target=='mnist':
                 target=target.expand(args.batch_size,3,args.img_size,args.img_size)
-            feature = net_G(data[0].to(args.device))
+            feature = net_G(data[0].to(args.device)).detach()
             c1 = net_D1(feature)
             c2 = net_D2(feature)
             label = data[1].to(args.device)
-            f_t=net_G(target)
+            f_t=net_G(target).detach()
             c1_t=net_D1(f_t)
             c2_t=net_D2(f_t)
             # maximize discrepancy
+            # fix_net(net_G,False)
             l_adv=get_dis(c1_t,c2_t)
             loss_B = criterion(c1, label) + criterion(c2, label)-l_adv
             loss_B.backward()
@@ -72,6 +76,11 @@ def  train(args,source_trainset,target_trainset):
             opt_c2.step()
             set_zero_grad(net_G,net_D1,net_D2)
             # print('stepC')
+
+            # fix_net(net_G,True)
+            # fix_net(net_D1, False)
+            # fix_net(net_D2, False)
+
             loss_C=0
             for itr_g in range(args.gen_epoch):
                 f_t = net_G(target)
@@ -80,17 +89,29 @@ def  train(args,source_trainset,target_trainset):
                 loss_C = get_dis(c1_t, c2_t)
                 loss_C.backward()
                 opt_g.step()
-            if i%500==0:
+
+            # fix_net(net_D1, True)
+            # fix_net(net_D2, True)
+            if i%100==0:
                 print(lossA,loss_B,loss_C)
-        if epoch%args.save_epoch==0:
-            print('epochs:',epoch)
-            print('saving')
-            torch.save({
-                "G_state_dict": net_G.state_dict(),
-                "C1_state_dict": net_D1.state_dict(),
-                "C2_state_dict": net_D2.state_dict()
-            }, "result.pth.tar"
-            )
+                print('saving')
+                torch.save({
+                    "G_state_dict": net_G.state_dict(),
+                    "C1_state_dict": net_D1.state_dict(),
+                    "C2_state_dict": net_D2.state_dict()
+                }, "result.pth.tar"
+                )
+                test(args, target_test)
+        # if epoch%args.save_epoch==0:
+        #     print('epochs:',epoch)
+        #     print('saving')
+        #     torch.save({
+        #         "G_state_dict": net_G.state_dict(),
+        #         "C1_state_dict": net_D1.state_dict(),
+        #         "C2_state_dict": net_D2.state_dict()
+        #     }, "stepA_result.pth.tar"
+        #     )
+        #     test(args, target_test)
 
 
 def set_optimizer(G,C1,C2, algorithm='SGD', lr=0.001, momentum=0.9):
@@ -117,6 +138,7 @@ def set_optimizer(G,C1,C2, algorithm='SGD', lr=0.001, momentum=0.9):
         return opt_g,opt_c1,opt_c2
 
 def test(args,target_test):
+    print('testing....')
     ckp = torch.load("result.pth.tar")
     net_G.load_state_dict(ckp['G_state_dict'])
     net_D1.load_state_dict(ckp['C1_state_dict'])
@@ -149,14 +171,14 @@ if __name__=="__main__":
     net_D2=model.Predictor().to(args.device)
     if os.path.exists('result.pth.tar'):
         print('loading....')
-        ckp = torch.load("result.pth.tar")
+        ckp = torch.load("result.pth.tar",map_location=args.device)
         net_G.load_state_dict(ckp['G_state_dict'])
         net_D1.load_state_dict(ckp['C1_state_dict'])
         net_D2.load_state_dict(ckp['C2_state_dict'])
     data_loader=data_loader(args=args)
     source_trainset, source_testset = get_data(args.source)
     target_trainset,target_test=get_data(args.target)
-    train(args,source_trainset,target_trainset)
+    train(args,source_trainset,target_trainset,target_test)
     # test(args,target_test)
 
 

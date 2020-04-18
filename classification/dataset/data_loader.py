@@ -9,6 +9,7 @@ class data_loader:
         self.transform=transforms.Compose([
     transforms.Resize(args.img_size),
     transforms.ToTensor(),
+    transforms.Normalize((0.5,0.5,0.5,), (0.5,0.5,0.5,))
 ])
     def get_data_loader(self,trainset,testset):
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=self.args.batch_size, shuffle=True,num_workers=self.args.num_workers)
@@ -16,8 +17,14 @@ class data_loader:
         return train_loader,test_loader
     
     def load_mnist(self):
-        minist_train=torchvision.datasets.MNIST(root='./data', train=False, transform=self.transform, download=True)
-        minist_test=torchvision.datasets.MNIST(root='./data', train=False, transform=self.transform, download=True)
+        args=self.args
+        transform = transforms.Compose([
+            transforms.Resize(args.img_size),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ])
+        minist_train=torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=False)
+        minist_test=torchvision.datasets.MNIST(root='./data', train=False, transform=transform, download=False)
         # 4,1,28,28
         return self.get_data_loader(minist_train,minist_test)
     
