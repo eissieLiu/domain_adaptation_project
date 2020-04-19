@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-
+from model import grad_reverse
 class Feature(nn.Module):
     def __init__(self):
         super(Feature, self).__init__()
@@ -34,10 +34,13 @@ class Predictor(nn.Module):
         self.bn_fc3 = nn.BatchNorm1d(10)
         self.prob = prob
 
-    def set_lambda(self, lambd):
-        self.lambd = lambd
+    # def set_lambda(self, lambd):
+    #     self.lambd = lambd
 
-    def forward(self, x):
+    def forward(self, x,reverse=False):
+        if reverse:
+            rev=grad_reverse.grad_reverse()
+            x=rev(x)
         x = F.relu(self.bn2_fc(self.fc2(x)))
         x = self.fc3(x)
         return x

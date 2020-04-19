@@ -9,7 +9,7 @@ class argument:
         self.batch_size=128
         self.num_workers=4
         self.opt='Adam'
-        self.epochs=200
+        self.epochs=2000
         self.img_size=32
         # self.scale=32
         self.gen_epoch=4
@@ -29,6 +29,17 @@ def get_data(data):
         return data_loader.load_mnist()
 
 # stepA train both classifiers and generator to classify the source samples correctly.
+def save_model(best,acc):
+    if best < acc:
+        print('saving')
+        best = acc
+        torch.save({
+            "G_state_dict": net_G.state_dict(),
+            "C1_state_dict": net_D1.state_dict(),
+            "C2_state_dict": net_D2.state_dict()
+        }, "result.pth.tar"
+        )
+    return best
 
 def set_zero_grad(netG,netD1,netD2):
     netG.zero_grad()
@@ -37,7 +48,9 @@ def set_zero_grad(netG,netD1,netD2):
 def  train(args,source_trainset,target_trainset,target_test):
     criterion=nn.CrossEntropyLoss()
     opt_g, opt_c1, opt_c2=set_optimizer(net_G,net_D1,net_D2,args.opt,lr=0.0002)
-
+    # net_D1.set_lambda(1.0)
+    # net_D2.set_lambda(1.0)
+    best=0
     torch.cuda.manual_seed(1)
     for epoch in range(args.epochs):
         for i,data in enumerate(source_trainset):
@@ -85,34 +98,26 @@ def  train(args,source_trainset,target_trainset,target_test):
             loss_C=0
             for itr_g in range(args.gen_epoch):
                 f_t = net_G(target)
-                c1_t = net_D1(f_t)
-                c2_t = net_D2(f_t)
-                loss_C = get_dis(c1_t, c2_t)
+                c1_t = net_D1(f_t,reverse=True)
+                c2_t = net_D2(f_t,reverse=True)
+                loss_C = -get_dis(c1_t, c2_t)
                 loss_C.backward()
                 opt_g.step()
+            set_zero_grad(net_G,net_D1,net_D2)
 
             # fix_net(net_D1, True)
             # fix_net(net_D2, True)
-            if i%200==0:
+            if i%200==0 :
                 print(lossA,loss_B,loss_C)
-                print('saving')
-                torch.save({
-                    "G_state_dict": net_G.state_dict(),
-                    "C1_state_dict": net_D1.state_dict(),
-                    "C2_state_dict": net_D2.state_dict()
-                }, "result.pth.tar"
-                )
-                test(args, target_test)
+                acc=test(args, target_test)
+                best=save_model(best, acc)
+                print('best:',best)
+
         if epoch==args.save_epoch-1:
             print('epochs:',epoch)
-            print('saving')
-            torch.save({
-                "G_state_dict": net_G.state_dict(),
-                "C1_state_dict": net_D1.state_dict(),
-                "C2_state_dict": net_D2.state_dict()
-            }, "stepA_result.pth.tar"
-            )
-            test(args, target_test)
+            acc=test(args, target_test)
+            best=save_model(best,acc)
+
 
 
 def set_optimizer(G,C1,C2, algorithm='SGD', lr=0.001, momentum=0.9):
@@ -140,10 +145,10 @@ def set_optimizer(G,C1,C2, algorithm='SGD', lr=0.001, momentum=0.9):
 
 def test(args,target_test):
     print('testing....')
-    ckp = torch.load("result.pth.tar")
-    net_G.load_state_dict(ckp['G_state_dict'])
-    net_D1.load_state_dict(ckp['C1_state_dict'])
-    net_D2.load_state_dict(ckp['C2_state_dict'])
+    # ckp = torch.load("result.pth.tar")
+    # net_G.load_state_dict(ckp['G_state_dict'])
+    # net_D1.load_state_dict(ckp['C1_state_dict'])
+    # net_D2.load_state_dict(ckp['C2_state_dict'])
     correct0=0.0
     correct1=0.0
     correct2=0.0
@@ -161,9 +166,10 @@ def test(args,target_test):
             r3=(c1+c2).data.max(1)[1]
             correct0+=(r1.eq(label.data).sum()).cpu()
             correct1+=(r2.eq(label.data).sum()).cpu()
-            correct2+(r3.eq(label.data).sum()).cpu()
+            correct2+=(r3.eq(label.data).sum()).cpu()
             sum+=target.size(0)
     print(float(correct0/sum),float(correct1/sum),float(correct2/sum))
+    return max(float(correct0/sum),float(correct1/sum),float(correct2/sum))
 import os
 if __name__=="__main__":
     args=argument()
