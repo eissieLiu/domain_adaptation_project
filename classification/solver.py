@@ -9,8 +9,9 @@ class argument:
         self.batch_size=128
         self.num_workers=4
         self.opt='Adam'
-        self.epochs=2000
+        self.epochs=200
         self.img_size=32
+        # self.scale=32
         self.gen_epoch=4
         self.save_epoch=50
         self.device=torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
@@ -35,7 +36,7 @@ def set_zero_grad(netG,netD1,netD2):
     netD2.zero_grad()
 def  train(args,source_trainset,target_trainset,target_test):
     criterion=nn.CrossEntropyLoss()
-    opt_g, opt_c1, opt_c2=set_optimizer(net_G,net_D1,net_D2,args.opt,lr=0.002)
+    opt_g, opt_c1, opt_c2=set_optimizer(net_G,net_D1,net_D2,args.opt,lr=0.0002)
 
     torch.cuda.manual_seed(1)
     for epoch in range(args.epochs):
@@ -92,7 +93,7 @@ def  train(args,source_trainset,target_trainset,target_test):
 
             # fix_net(net_D1, True)
             # fix_net(net_D2, True)
-            if i%100==0:
+            if i%200==0:
                 print(lossA,loss_B,loss_C)
                 print('saving')
                 torch.save({
@@ -102,16 +103,16 @@ def  train(args,source_trainset,target_trainset,target_test):
                 }, "result.pth.tar"
                 )
                 test(args, target_test)
-        # if epoch%args.save_epoch==0:
-        #     print('epochs:',epoch)
-        #     print('saving')
-        #     torch.save({
-        #         "G_state_dict": net_G.state_dict(),
-        #         "C1_state_dict": net_D1.state_dict(),
-        #         "C2_state_dict": net_D2.state_dict()
-        #     }, "stepA_result.pth.tar"
-        #     )
-        #     test(args, target_test)
+        if epoch==args.save_epoch-1:
+            print('epochs:',epoch)
+            print('saving')
+            torch.save({
+                "G_state_dict": net_G.state_dict(),
+                "C1_state_dict": net_D1.state_dict(),
+                "C2_state_dict": net_D2.state_dict()
+            }, "stepA_result.pth.tar"
+            )
+            test(args, target_test)
 
 
 def set_optimizer(G,C1,C2, algorithm='SGD', lr=0.001, momentum=0.9):

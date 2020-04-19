@@ -7,9 +7,10 @@ class data_loader:
     def __init__(self,args):
         self.args=args
         self.transform=transforms.Compose([
+    # transforms.Scale(args.scale),
     transforms.Resize(args.img_size),
     transforms.ToTensor(),
-    transforms.Normalize((0.5,0.5,0.5,), (0.5,0.5,0.5,))
+    transforms.Normalize((0.5,0.5,0.5), (0.5,0.5,0.5))
 ])
     def get_data_loader(self,trainset,testset):
         train_loader = torch.utils.data.DataLoader(trainset, batch_size=self.args.batch_size, shuffle=True,num_workers=self.args.num_workers)
