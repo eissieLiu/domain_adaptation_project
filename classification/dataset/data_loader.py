@@ -2,7 +2,6 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-
 class data_loader:
     def __init__(self,args):
         self.args=args
@@ -40,9 +39,15 @@ class data_loader:
         return self.get_data_loader(svhn_train,svhn_test)
     
     def load_usps(self):
-        usps_train = torchvision.datasets.USPS(root='./data', train=True, transform=self.transform,
+        args = self.args
+        transform = transforms.Compose([
+            transforms.Resize(args.img_size),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ])
+        usps_train = torchvision.datasets.USPS(root='./data', train=True, transform=transform,
                                                   download=True)
-        usps_test = torchvision.datasets.USPS(root='./data', train=False, transform=self.transform,
+        usps_test = torchvision.datasets.USPS(root='./data', train=False, transform=transform,
                                                   download=True)
         # 4,1,16,16
         return self.get_data_loader(usps_train,usps_test)

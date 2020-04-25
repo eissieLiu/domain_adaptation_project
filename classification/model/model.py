@@ -13,13 +13,15 @@ class Feature(nn.Module):
         self.fc1 = nn.Linear(8192, 3072)
         self.bn1_fc = nn.BatchNorm1d(3072)
 
-    def forward(self, x):
+
+    def forward(self, x,mode):
         x = F.max_pool2d(F.relu(self.bn1(self.conv1(x))), stride=2, kernel_size=3, padding=1)
         x = F.max_pool2d(F.relu(self.bn2(self.conv2(x))), stride=2, kernel_size=3, padding=1)
         x = F.relu(self.bn3(self.conv3(x)))
         x = x.view(x.size(0), 8192)
-        x = F.relu(self.bn1_fc(self.fc1(x)))
-        x = F.dropout(x, training=self.training)
+        if mode!='ad_drop':
+            x = F.relu(self.bn1_fc(self.fc1(x)))
+            x = F.dropout(x, training=self.training)
         return x
 
 
@@ -37,10 +39,17 @@ class Predictor(nn.Module):
     # def set_lambda(self, lambd):
     #     self.lambd = lambd
 
-    def forward(self, x,reverse=False):
-        if reverse:
-            rev=grad_reverse.grad_reverse()
-            x=rev(x)
+    def forward(self, x,mode,reverse=False):
+
+        if mode!='ad_drop':
+            if reverse:
+                rev=grad_reverse.grad_reverse()
+                x=rev(x)
+        else:
+            x = F.relu(self.bn1_fc(self.fc1(x)))
+            x = F.dropout(x, training=self.training, p=self.prob)
         x = F.relu(self.bn2_fc(self.fc2(x)))
+        if mode == 'ad_drop':
+            x = F.dropout(x, training=self.training, p=self.prob)
         x = self.fc3(x)
         return x

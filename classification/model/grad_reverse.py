@@ -2,7 +2,6 @@ from torch.autograd import Function
 
 
 class GradReverse(Function):
-
     @staticmethod
     def forward(ctx,x):
         return x.view_as(x)
