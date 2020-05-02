@@ -20,8 +20,8 @@ We mainly carried out experiments in **digit dataset** (USPS,SVHN,MNIST) and **V
 
 ## Experiments in VisDA datasets
 * Run `python VisDA/solver.py`
-* Run `VisDA/solver.py --mode='ad-drop'` to use ADR method
-* Run `VisDA/solver.py --mode='normal'` to use MCD method
+* Run `python VisDA/solver.py --mode='ad-drop'` to use ADR method
+* Run `python VisDA/solver.py --mode='normal'` to use MCD method
 
 
 ## Reference
