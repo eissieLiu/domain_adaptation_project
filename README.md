@@ -3,7 +3,7 @@ This is the project GitHub for **popular approach to domain adaptation**.
 
 We reimplement 
 * 'Maximum Classifier Discrepancy for Unsupervised Domain Adaptation' **(MCD)** [2] ,
-* 'ADVERSARIAL DROPOUT REGULARIZATION'**(ADR)** [1] 
+* 'Adversarial Dropout Regularization'**(ADR)** [1] 
 * 'Semi-supervised Domain Adaptation via Minimax Entropy' [3] 
 
 in *pytorch*. 
