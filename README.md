@@ -1,10 +1,10 @@
 # domain_adaptation_project
-This is the project GitHub for **popular approach to domain adaptation**.
+This is the project GitHub for **popular approaches to domain adaptation**, authored by Yize Xie, Wenxing Liu.
 
 We reimplement 
-* 'Maximum Classifier Discrepancy for Unsupervised Domain Adaptation' **(MCD)** [2] ,
-* 'Adversarial Dropout Regularization'**(ADR)** [1] 
-* 'Semi-supervised Domain Adaptation via Minimax Entropy' [3] 
+* Maximum Classifier Discrepancy for Unsupervised Domain Adaptation **(MCD)** [2]
+* Adversarial Dropout Regularization**(ADR)** [1] 
+* Semi-supervised Domain Adaptation via Minimax Entropy [3] 
 
 in *pytorch*. 
 
